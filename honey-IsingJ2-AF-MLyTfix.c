@@ -16,37 +16,41 @@ void montecarlo_step(int N1, int N2 ,double J,double J2, double T,int *p,int *q,
 //la funcion montecarlo step realiza *un* intento de flip. 
 void plot_termalizacion(int N1,int N2,double J,double J2,double T,int* p,int* q,double* e,double* m,int tau);
 void Annealing(double* e, double* m, int Nsites, int Neq,
-double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d,double Tc);
-void export_data(int* p, int* q, int N1, int N2, double T, double Tc,FILE* d);
+double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d);
+void export_data(int* p, int* q, int N1, int N2, double T,FILE* d);
 void iniciar(int*p, int*q,int N1,int N2,double J, double J2,double*e,double* m);
 void AnnealingT(double* e, double* m, int Nsites, int Neq,
-double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d,double Tc,
-double*ep,double*e2p,double*mp,double*m2p);
+double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d,
+double*ep,double*e2p,double*mp,double*m2p,int exportflag);
+void exportThermo(double T0, double NT, int Nsites, int Nprom,double* ep,
+double* e2p, double*mp,double*m2p,FILE*f);
+
 
 /* -------------------------- Main -------------------------- */
 int main() {
+clock_t start, end;
+double cpu_time_used;
 
-int N2=5;
+int N2=15;
 int N1=2*N2;
+int Nsites=2*N1*N2; // numero de sitios en toda la red.
 int Nprom=400;
-int Neq=250;// numero de montecarlosteps / sites para que termalice el sistema.
+int Neq=400;// numero de montecarlosteps / sites para que termalice el sistema.
 //int tau=10000;// tiempo medido en montecarlo steps / site 
 int lattA[N1][N2]; //defino arrays sin iniciar 
-int lattB[N1][N2]; //sin iniciar 
+int lattB[N1][N2]; //sin iniciar
 for (int i=0;i<N1;i++){//inicializo lattice a cero.
 	for (int j=0;j<N2;j++){
-		lattA[i][j]=0;
-		lattB[i][j]=0;
+	lattA[i][j]=0;
+	lattB[i][j]=0;
 	}
 }
 double mag=0.; //magnetización total del sistema 
-double Energy=0.; //Energia total del sistema  
-
+double Energy=0.; //Energia total del sistema
 int *p =&lattA[0][0]; /* p apunta al primer elemento de lattA */
 int *q =&lattB[0][0];/* q apunta al primer elemento de lattB */
 double *m=&mag;
 double *e=&Energy;
-
 
 double J=-1.; // NN coupling, positivo es ferro.
 double T0=4.53;// temperatura inicial
@@ -56,22 +60,13 @@ double eprom[NT];
 double e2prom[NT];
 double mprom[NT];
 double m2prom[NT];
-//contadores 
-for ( int j=0; j< NT;j++){
-	eprom[j]=0;
-	e2prom[j]=0;
-	mprom[j]=0;
-	m2prom[j]=0;
-} 
-
-
+double cvprom[NT];
 double* ep=eprom;
 double* e2p=e2prom;
 double* mp=mprom;
 double* m2p=m2prom;
-//T0=.5;
+double* cvp=cvprom;
 
-int Nsites=2*N1*N2; // numero de sitios en toda la red.
 
 //chequeo exportacion 
 /*
@@ -93,89 +88,68 @@ iniciar(p,q,N1,N2,J,J2,e,m);
 plot_termalizacion( N1, N2, J, J2, T,p,q,e,m,tau);
 */
 
-
+/*
 double J2=-0.0;///NNN coupling, positivo es ferro.
 double Tc=1.519;//teorica, ferro y anti ferro para la honeycombe-NN
-
-
-/*
-double J2=-0.1;///NNN coupling, positivo es ferro.
-double Tc=1.;//teorica, ferro y anti ferro para la honeycombe-NN
 */
 
-/*
-double J2=-0.2;///NNN coupling, positivo es ferro.
-double Tc=0.42; // la saco del Cv, depende de J2.
-*/
+double J2list[ ]={-0.3,-0.15,-1.0,-0.9,-0.8};
+double* J2p=J2list;
+int size = sizeof J2list / sizeof J2list[0];
+printf("J2list has %d elements\n",size);
 
-/*
-double J2=-0.3;///NNN coupling, positivo es ferro.
-double Tc=0.31; // la saco del Cv, depende de J2.
-*/
+for (int k=0;k<size;k++){
+	printf("J2=%.2f\n",*(J2p+k));
+	start = clock();
+	for ( int j=0; j< NT;j++){ //inicio contadores 
+		eprom[j]=0;
+		e2prom[j]=0;
+		mprom[j]=0;
+		m2prom[j]=0;
+		cvprom[j]=0;
+	} 
+	char filenameA [100];
+	sprintf (filenameA,"/home/s-l/Desktop/arrays_%d_%.2f.txt",N1,*(J2p+k));
+	FILE *d = fopen(filenameA, "w"); // open file for export arrays
 
-/*
-double J2=-0.4;///NNN coupling, positivo es ferro.
-double Tc=0.45; // la saco del Cv, depende de J2.
-*/
+	char filenameT [100];
+	sprintf (filenameT,"dataAF/termodinamica_%d_%.2f.txt",N1,*(J2p+k));
+	FILE *f = fopen(filenameT, "w"); // open file to escribir las cantidades termodinamicas
 
-/*
-double J2=-1.0;///NNN coupling, positivo es ferro.
-double Tc=0.9; // la saco del Cv, depende de J2.
-*/
-
-
-
-char filenameA [100];
-sprintf (filenameA,"/home/s-l/Desktop/arrays_%d_%.1f.txt",N1,-J2);
-FILE *d = fopen(filenameA, "w"); // open file for export arrays
-
-char filenameT [100];
-sprintf (filenameT,"dataAF/termodinamica_%d_%.1f.txt",N1,-J2);
-FILE *f = fopen(filenameT, "w"); // open file to escribir las cantidades termodinamicas
-
-
-for(int ii=1;ii<=Nprom;ii++){// Nprom annealings
-	iniciar(p,q,N1,N2,J,J2,e,m);
-	AnnealingT(e,m,Nsites,Neq,T0,N1,N2,p,q,J,J2,d,Tc,ep,e2p,mp,m2p);
-	printf("%d, m=%f, e=%f",ii,*m/(double)Nsites,*e/(double)Nsites);
+	int exportflag=1;
+	for(int ii=1;ii<=Nprom;ii++){// Nprom annealings
+		iniciar(p,q,N1,N2,J,*(J2p+k),e,m);
+		AnnealingT(e,m,Nsites,Neq,T0,N1,N2,p,q,J,*(J2p+k),d,ep,e2p,mp,m2p,exportflag);
+		printf("%d, m=%f, e=%f\n",ii,*m/(double)Nsites,*e/(double)Nsites);
+	}
+	//exporto valores medios de observables termodinamicos 
+	exportThermo(T0,NT,Nsites,Nprom,ep,e2p, mp,m2p,f);
+	printf("\n");
+	fclose(d); //cierro el file donde escribo las configuraciones
+	fclose(f);//cierro el file donde escribo la termodinamica
+	end = clock();
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("this task took %.1f seconds\n", cpu_time_used); 
 }
-
-
-
-
-
-//exporto valores medios de observables termodinamicos 
-int k=0;
-for (double T=T0;T>0.0226;T+=-0.02265){
-	//printf("%f, %f, %f\n",T,*(mp+k)/Nprom/Nsites, *(ep+k)/Nprom/Nsites);
-	*(ep+k)=*(ep+k)/(float)Nprom/Nsites; //tomo valor medio + normalizacion
-	*(e2p+k)=*(e2p+k)/(float)Nprom/Nsites/Nsites; //tomo valor medio  + normalizacion
-	//*(cvpoint+k)= Nsites * (  *(e2p+k) - pow(*(ep+k),2)   )/T/T; //Barkema
-	*(mp+k)=*(mp+k)/(float)Nprom/Nsites; //tomo valor medio 
-	*(m2p+k)=*(m2p+k)/(float)Nprom/Nsites/Nsites; //tomo valor medio 
-	//*(chipoint+k)=Nsites*   (  *(m2p+k) - pow(*(mp+k),2)  )/T; //Barkema
-	fprintf(f,"%f %f %f %f %f\n",
-		T,*(mp+k),*(m2p+k),*(ep+k),*(e2p+k) ) ;
-//*(chipoint+k) *(cvpoint+k)
-k+=1;
-}
-
-
-
-
-
-printf("\n");
-printf("J2=%.1f\n",-J2);
-
-
-
-fclose(d); //cierro el file donde escribo las configuraciones
-fclose(f);//cierro el file donde escribo la termodinamica
-
 
 
 return 0;
 } /* ---------------------- End Main ---------------------- */
+
+void exportThermo(double T0, double NT, int Nsites, int Nprom,double* ep,
+double* e2p, double*mp,double*m2p,FILE*f){
+//exporto valores medios de observables termodinamicos 
+int k=0;
+for (double T=T0;T>0.0226;T+=-0.02265){
+	*(ep+k)=*(ep+k)/(float)Nprom/Nsites; //tomo valor medio + normalizacion
+	*(e2p+k)=*(e2p+k)/(float)Nprom/Nsites/Nsites; //tomo valor medio  + normalizacion
+	*(mp+k)=*(mp+k)/(float)Nprom/Nsites; //tomo valor medio 
+	*(m2p+k)=*(m2p+k)/(float)Nprom/Nsites/Nsites; //tomo valor medio 
+	fprintf(f,"%f %f %f %f %f\n",T,*(mp+k),*(m2p+k),*(ep+k),*(e2p+k) ) ;
+	k+=1;
+	}
+}
+
 
 
 void iniciar(int*p, int*q,int N1,int N2,double J, double J2,double*e ,double*m){
@@ -190,12 +164,13 @@ void iniciar(int*p, int*q,int N1,int N2,double J, double J2,double*e ,double*m){
 
 
 
-void export_data(int* p, int* q, int N1, int N2, double T, double Tc,FILE* d){
+void export_data(int* p, int* q, int N1, int N2, double T,FILE* d){
 
+/* 
 if(T<Tc ){fprintf(d,"%d ",0);}//label
 else{fprintf(d,"%d ",1);};
+*/
 fprintf(d,"%f ",T);//Temperature
-
 for(int i=0;i<N1;i++){ 
 	int j=mod(-2*i,N2); 
 	for(int k=0;k<N2;k++){ // repito N2 veces 
@@ -209,15 +184,15 @@ fprintf(d,"\n");
 
 
 void AnnealingT(double* e, double* m, int Nsites, int Neq,
-double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d,double Tc,
-double*ep,double*e2p,double*mp,double*m2p){
+double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d,
+double*ep,double*e2p,double*mp,double*m2p,int exportflag){
 int ii=0;
 	for (double T=T0;T>0.0226;T+=-0.02265){
 		//estimacion del equilibrio a la dada temperatura:
 		for (int t=0;t<Nsites*Neq;t++){montecarlo_step(N1,N2,J,J2,T,p,q,e,m);}
 		//printf("T=%f, e=%f, m=%f\n",T,*e/Nsites,*m/Nsites);
 		if(abs(*m/Nsites)<1.1){
-			export_data(p,q,N1,N2,T,Tc,d);
+			if (exportflag==1){export_data(p,q,N1,N2,T,d);};
 			*(ep+ii)+=*e;
 			*(e2p+ii)+=pow(*e,2);
 			*(mp+ii)+=abs(*m); // me quedo con la positiva para promediar 
@@ -236,7 +211,7 @@ int ii=0;
 //--------------------------------------------
 
 void Annealing(double* e, double* m, int Nsites, int Neq,
-double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d,double Tc){
+double T0, int N1, int N2,int* p, int* q, double J,double J2,FILE* d){
 
 	for (double T=T0;T>0.0226;T+=-0.02265){
 		//estimacion del equilibrio a la dada temperatura:
@@ -327,7 +302,7 @@ else{ // o sea r>0.5 // miro el espin Aij
 
 
 	//Delta_E+=2.*J* *(p + rand_j+rand_i*N2) *sumNN;
-	Delta_E+=2.* *(p + rand_j+rand_i*N2)  * (J* sumNN+J2* sumNNN);
+	Delta_E+=2.* *(p + rand_j+rand_i*N2)  * (J* sumNN+J2 * sumNNN);
 	//printf("DeltaE2= %f\n",Delta_E);
 	if(Delta_E<=epsilonE){ 
 		*(p + rand_j+rand_i*N2) = -*(p + rand_j+rand_i*N2);
@@ -351,11 +326,9 @@ else{
 
 
 
-
-
 //Calculo la energia de la configuracion 
 double calc_Energy(int *p,int *q,int N1,int N2,double J,double J2){ 
-printf("  \n");
+//printf("  \n");
 double EnergyP=0;
 for (int i=0 ;i<N1 ;i++ ){ //recorro todas las celdas 
 for (int j=0 ;j<N2 ;j++ ){
@@ -364,13 +337,13 @@ EnergyP+=(-1)*J*( *(q + j+i*N2  ) * *(p + mod(j+1,N2)+mod(i,N1)*N2) );
 EnergyP+=(-1)*J*( *(q + j+i*N2  ) * *(p +mod(j-1,N2)+mod(i+1,N1)*N2) );
 
 
-EnergyP+=(-1)*J2*( *(p +j+i*N2  ) * *(p +mod(i-1,N1)*N2 + mod(j+2,N2)  ));
-EnergyP+=(-1)*J2*( *(p +j+i*N2  ) * *(p +mod(i,N1)*N2 + mod(j+1,N2)  ));
-EnergyP+=(-1)*J2*( *(p +j+i*N2  ) * *(p +mod(i+1,N1)*N2 + mod(j-1,N2)  ));
+EnergyP+=(-1)* J2 *( *(p +j+i*N2  ) * *(p +mod(i-1,N1)*N2 + mod(j+2,N2)  ));
+EnergyP+=(-1)* J2 *( *(p +j+i*N2  ) * *(p +mod(i,N1)*N2 + mod(j+1,N2)  ));
+EnergyP+=(-1)* J2 *( *(p +j+i*N2  ) * *(p +mod(i+1,N1)*N2 + mod(j-1,N2)  ));
 
-EnergyP+=(-1)*J2*( *(q +j+i*N2  ) * *(q +mod(i-1,N1)*N2 + mod(j+2,N2)  ));
-EnergyP+=(-1)*J2*( *(q +j+i*N2  ) * *(q +mod(i,N1)*N2 + mod(j+1,N2)  ));
-EnergyP+=(-1)*J2*( *(q +j+i*N2  ) * *(q +mod(i+1,N1)*N2 + mod(j-1,N2)  ));
+EnergyP+=(-1)* J2 *( *(q +j+i*N2  ) * *(q +mod(i-1,N1)*N2 + mod(j+2,N2)  ));
+EnergyP+=(-1)* J2 *( *(q +j+i*N2  ) * *(q +mod(i,N1)*N2 + mod(j+1,N2)  ));
+EnergyP+=(-1)* J2 *( *(q +j+i*N2  ) * *(q +mod(i+1,N1)*N2 + mod(j-1,N2)  ));
 }
 }
 
