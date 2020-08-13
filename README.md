@@ -1,4 +1,4 @@
-# Machine-learning-phases-of-matter
+# Transfer and confusion deep learning on frustrated spin systems
 
 honey-IsingJ2-stat.c runs 'Nprom' independent simulations.it calculates the main thermodinamics and exports both thermodinamics and raw configurations. 
 
