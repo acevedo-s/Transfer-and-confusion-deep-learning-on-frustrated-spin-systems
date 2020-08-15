@@ -5,7 +5,7 @@ All the codes uploaded in this repository are available for use and distribute. 
 
 Codes written by Santiago Acevedo (acevedo-s in Github): 
 
--- Honey-IsingJ2-AF-ML-T.c runs 400 independent Monte carlo simulations of the J1-J2 Ising model on the honeycomb lattice. It calculates the main thermodynamics and exports both thermodinamics and raw configurations. 
+-- Honey-IsingJ2-AF-ML-T.c runs several independent Monte carlo simulations of the J1-J2 Ising model on the honeycomb lattice. It calculates the main thermodynamics and exports both thermodinamics and raw configurations. 
 
 -- Honeycomb_Dense.ipynb  Dense feed forward neural network that makes the classification from Fig.2 in our work.
 
