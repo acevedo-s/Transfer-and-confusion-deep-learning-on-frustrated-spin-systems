@@ -3,16 +3,27 @@
 All the codes uploaded in this repository are available for use and distribute. In either case, please cite our work using  
 
 @article{CORTE2021110702,
+
 title = {Exploring neural network training strategies to determine phase transitions in frustrated magnetic models},
+
 journal = {Computational Materials Science},
+
 volume = {198},
+
 pages = {110702},
+
 year = {2021},
+
 issn = {0927-0256},
+
 doi = {https://doi.org/10.1016/j.commatsci.2021.110702},
+
 url = {https://www.sciencedirect.com/science/article/pii/S0927025621004298},
+
 author = {I. Corte and S. Acevedo and M. Arlego and C.A. Lamas},
+
 keywords = {Frustrated magnetism, Machine learning, Ising model, Honeycomb lattice, Square lattice, Neural networks}
+
 }
 
 
